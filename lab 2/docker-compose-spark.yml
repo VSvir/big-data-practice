@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  spark-master:
+    image: bitnami/spark:3.5.1
+    container_name: spark-master
+    ports:
+      - "8080:8080"  # Spark UI
+      - "7077:7077"  # Spark Master port
+    environment:
+      - SPARK_MODE=master
+      - SPARK_LOCAL_IP=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - HADOOP_CONF_DIR=/etc/hadoop
+      - YARN_CONF_DIR=/etc/hadoop
+    volumes:
+      - ./metrics:/app/metrics:rw
+      - ./src:/app/src:rw
+      - ./data:/data
+      - ./hadoop-config:/etc/hadoop
+      - ./requirements.txt:/app/requirements.txt
+    networks:
+      - hadoop-network
+    command:
+      - /bin/bash
+      - -c
+      - "pip install -r /app/requirements.txt && /opt/bitnami/scripts/spark/run.sh"
+
+  spark-worker1:
+    image: bitnami/spark:3.5.1
+    container_name: spark-worker1
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=4g
+      - SPARK_WORKER_CORES=2
+    networks:
+      - hadoop-network
+
+networks:
+  hadoop-network:
+    external: true
